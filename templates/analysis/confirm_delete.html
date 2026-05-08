@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Confirm Delete{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow max-w-sm mx-auto mt-12">
+  <div class="card-body">
+    <h2 class="card-title text-error">Delete Record</h2>
+    <p class="text-sm text-gray-600">
+      Are you sure you want to delete
+      <!-- {{ object }} calls __str__() on the model instance. -->
+      <strong>{{ object }}</strong>? This cannot be undone.
+    </p>
+    <!-- Django's DeleteView requires a POST request to actually delete. -->
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <div class="card-actions justify-end">
+        <a href="{{ cancel_url }}" class="btn btn-ghost btn-sm">Cancel</a>
+        <button class="btn btn-error btn-sm">Yes, delete</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
