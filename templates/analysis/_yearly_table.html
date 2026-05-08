@@ -1,0 +1,40 @@
+{% if rows %}
+<div class="overflow-x-auto">
+  <!-- table-zebra: alternating row background colours (DaisyUI).
+       table-sm:    compact row padding. -->
+  <table class="table table-zebra table-sm w-full">
+    <thead>
+      <tr>
+        <th>Year</th>
+        <th>Clinic</th>
+        <th>Births</th>
+        <th>Deaths</th>
+        <th>Proportion</th>
+        <th class="text-right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.year }}</td>
+        <td>{{ r.clinic }}</td>
+        <td>{{ r.births }}</td>
+        <td>{{ r.deaths }}</td>
+        <!-- floatformat:4 rounds to 4 decimal places for compact display. -->
+        <td>{{ r.proportion_deaths|floatformat:4 }}</td>
+        <td class="text-right">
+          <!-- btn-xs: extra-small button, fits in a table cell. -->
+          <a href="{% url 'analysis:yearly-update' r.pk %}"
+             class="btn btn-xs btn-ghost">Edit</a>
+          <a href="{% url 'analysis:yearly-delete' r.pk %}"
+             class="btn btn-xs btn-error btn-outline">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <!-- Shown when the filtered queryset (e.g. clinic1) is empty. -->
+  <p class="text-sm text-gray-500 py-4">No records for this clinic.</p>
+{% endif %}
