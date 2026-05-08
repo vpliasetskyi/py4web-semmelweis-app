@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold my-4">Semmelweis Handwashing Analysis</h1>
+
+<!-- Conditional warning banner shown when no data has been imported yet. -->
+{% if not has_data %}
+<div class="alert alert-warning mb-4">
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none"
+       viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+  </svg>
+  <span>No data loaded yet.
+    <a href="{% url 'analysis:upload' %}" class="link font-semibold">Upload CSV files</a>
+    to begin.
+  </span>
+</div>
+{% endif %}
+
+<!-- DaisyUI tabs: role="tablist" + tabs-boxed gives the pill/box style. -->
+<div role="tablist" class="tabs tabs-boxed mb-0 bg-base-100 rounded-b-none px-2 pt-2">
+
+  <!-- Tab 1: Overview -->
+  <input type="radio" name="dash-tabs" role="tab" class="tab"
+         aria-label="Overview" checked="checked" />
+  <div role="tabpanel" class="tab-content col-span-4 bg-base-100 rounded-b-box rounded-tr-box p-6">
+    <div class="flex flex-col md:flex-row gap-6 items-start">
+      <!-- Portrait served from media/uploads/ via the MEDIA_URL setting. -->
+      <img src="/media/uploads/semmelweis.jpeg"
+           alt="Dr. Ignaz Semmelweis"
+           class="w-36 rounded shadow-md shrink-0" />
+      <div>
+        <h2 class="text-xl font-semibold mb-2">Dr. Ignaz Semmelweis (1818–1865)</h2>
+        <p class="text-sm leading-relaxed max-w-prose text-gray-700">
+          A Hungarian physician active at the Vienna General Hospital.
+          In the early 1840s, up to <strong>10 %</strong> of women who gave birth
+          there died of <em>childbed fever</em>. Semmelweis discovered the cause:
+          doctors delivered babies immediately after performing autopsies, without
+          washing their hands. He mandated handwashing in <strong>June 1847</strong>,
+          cutting mortality dramatically — but was ridiculed by his peers and
+          eventually forced to leave Vienna.
+        </p>
+
+        <!-- stats-horizontal: lays the stat boxes in a row rather than a column. -->
+        <div class="stats stats-horizontal shadow mt-4 text-sm">
+          <div class="stat py-3 px-5">
+            <div class="stat-title text-xs">Yearly records loaded</div>
+            <!-- text-primary: the DaisyUI primary colour (blue). -->
+            <div class="stat-value text-primary text-2xl">{{ yearly_count }}</div>
+          </div>
+          <div class="stat py-3 px-5">
+            <div class="stat-title text-xs">Monthly records loaded</div>
+            <div class="stat-value text-secondary text-2xl">{{ monthly_count }}</div>
+          </div>
+        </div>
+
+        <div class="flex gap-2 mt-4">
+          <a href="{% url 'analysis:upload' %}"   class="btn btn-sm btn-outline">Upload CSV</a>
+          <a href="{% url 'analysis:analysis' %}" class="btn btn-sm btn-primary">Run Analysis →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 2: Yearly chart -->
+  <input type="radio" name="dash-tabs" role="tab" class="tab" aria-label="Yearly Data" />
+  <div role="tabpanel" class="tab-content col-span-4 bg-base-100 rounded-b-box rounded-tr-box p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-semibold">Yearly Deaths by Clinic (1841–1846)</h2>
+      <div class="flex gap-2">
+        <a href="{% url 'analysis:yearly-list' %}"    class="btn btn-sm btn-outline">Full CRUD view</a>
+        <a href="{% url 'analysis:dl-yearly-csv' %}"  class="btn btn-sm btn-outline">⬇ CSV</a>
+        <a href="{% url 'analysis:dl-clinic-chart' %}"class="btn btn-sm btn-outline">⬇ PNG</a>
+      </div>
+    </div>
+    <!-- Only render the canvas when data exists; otherwise show an info alert. -->
+    {% if yearly_count %}
+      <!-- h-72 gives the canvas a fixed height so Chart.js can calculate dimensions. -->
+      <div class="bg-white rounded-lg p-3 shadow-inner h-72">
+        <canvas id="dashClinicChart"></canvas>
+      </div>
+    {% else %}
+      <div class="alert alert-info text-sm">
+        No yearly data yet. <a href="{% url 'analysis:upload' %}" class="link">Upload the CSV</a>.
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Tab 3: Monthly chart -->
+  <input type="radio" name="dash-tabs" role="tab" class="tab" aria-label="Monthly Data" />
+  <div role="tabpanel" class="tab-content col-span-4 bg-base-100 rounded-b-box rounded-tr-box p-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-semibold">Monthly Proportion of Deaths — Clinic 1</h2>
+      <div class="flex gap-2">
+        <a href="{% url 'analysis:monthly-list' %}"    class="btn btn-sm btn-outline">Full CRUD view</a>
+        <a href="{% url 'analysis:dl-monthly-csv' %}"  class="btn btn-sm btn-outline">⬇ CSV</a>
+        <a href="{% url 'analysis:dl-monthly-chart' %}"class="btn btn-sm btn-outline">⬇ PNG</a>
+      </div>
+    </div>
+    {% if monthly_count %}
+      <div class="bg-white rounded-lg p-3 shadow-inner h-72">
+        <canvas id="dashMonthlyChart"></canvas>
+      </div>
+    {% else %}
+      <div class="alert alert-info text-sm">
+        No monthly data yet. <a href="{% url 'analysis:upload' %}" class="link">Upload the CSV</a>.
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Tab 4: Analysis link -->
+  <input type="radio" name="dash-tabs" role="tab" class="tab" aria-label="Statistical Analysis" />
+  <div role="tabpanel" class="tab-content col-span-4 bg-base-100 rounded-b-box rounded-tr-box p-6">
+    <p class="text-sm text-gray-600 mb-4">
+      The full analysis page runs the complete Semmelweis notebook:
+      clinic comparison, handwashing effect, bootstrap confidence interval,
+      and Welch's t-test.
+    </p>
+    <a href="{% url 'analysis:analysis' %}" class="btn btn-primary">
+      Open Full Analysis →
+    </a>
+  </div>
+</div>
+
+<script>
+  // DOMContentLoaded: wait until the page is fully parsed AND the deferred
+  // charts.js has been executed before calling the render functions.
+  document.addEventListener("DOMContentLoaded", function () {
+    // {{ yearly_chart_data|safe }} injects the JSON string directly into JS.
+    // |safe tells Django's template engine not to HTML-escape the string.
+    const cd = {{ yearly_chart_data|safe }};
+    const md = {{ monthly_chart_data|safe }};
+    // Guard: only render if the data is not the empty sentinel {empty: true}.
+    if (cd && !cd.empty) renderClinicChart("dashClinicChart", cd);
+    if (md && !md.empty) renderMonthlyChart("dashMonthlyChart", md);
+  });
+</script>
+{% endblock %}
