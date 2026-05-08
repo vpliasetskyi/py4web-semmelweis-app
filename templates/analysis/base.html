@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<!-- data-theme="light" activates DaisyUI's light colour palette globally. -->
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Semmelweis{% endblock %}</title>
+
+  <!-- DaisyUI (component styles) must load before Tailwind (utility classes). -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" />
+  <!-- Tailwind Play CDN: for development only. Use the CLI build for production. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js v4: interactive canvas charts rendered in the browser. -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+  {% load static %}
+  <!-- defer: the script is downloaded in parallel but executed after the HTML is parsed.
+       This ensures Chart.js is loaded before charts.js runs. -->
+  <script src="{% static 'js/charts.js' %}" defer></script>
+</head>
+<body class="min-h-screen bg-base-200">
+
+  <!-- Navbar: bg-base-100 is white in the light theme; shadow adds a subtle drop shadow. -->
+  <nav class="navbar bg-base-100 shadow px-4 gap-2">
+    <div class="flex-1">
+      <!-- btn-ghost: transparent button style. text-xl makes the brand name larger. -->
+      <a href="{% url 'analysis:dashboard' %}" class="btn btn-ghost text-xl font-bold">
+        🧼 Semmelweis
+      </a>
+    </div>
+    <div class="flex-none flex gap-2">
+      <a href="{% url 'analysis:upload' %}"       class="btn btn-sm btn-outline">Upload CSV</a>
+      <a href="{% url 'analysis:yearly-list' %}"  class="btn btn-sm btn-outline">Yearly</a>
+      <a href="{% url 'analysis:monthly-list' %}" class="btn btn-sm btn-outline">Monthly</a>
+      <!-- btn-primary uses the DaisyUI primary colour (blue by default). -->
+      <a href="{% url 'analysis:analysis' %}"     class="btn btn-sm btn-primary">Analysis</a>
+    </div>
+  </nav>
+
+  <!-- max-w-6xl keeps the content from stretching too wide on large screens. -->
+  <main class="container mx-auto p-4 max-w-6xl">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
