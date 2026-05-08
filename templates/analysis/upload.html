@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Upload CSV{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow max-w-lg mx-auto mt-8">
+  <div class="card-body">
+    <h2 class="card-title">Import CSV Files</h2>
+    <p class="text-sm text-gray-500 mb-2">
+      Upload <code>yearly_deaths_by_clinic.csv</code> and/or
+      <code>monthly_deaths.csv</code>. Existing records are replaced on each import.
+    </p>
+
+    <!-- non_field_errors: form-level errors from clean() (e.g. "Upload at least one file"). -->
+    {% if form.non_field_errors %}
+      <div class="alert alert-error text-sm mb-2">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <!-- multipart/form-data is mandatory for file uploads. -->
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
+      {% csrf_token %}
+      <!-- Loop over each form field rather than listing them individually.
+           This means adding a field to the form class automatically renders it here. -->
+      {% for field in form %}
+        <div class="form-control">
+          <label class="label"><span class="label-text font-medium">{{ field.label }}</span></label>
+          {{ field }}  <!-- renders the widget (file input) with its DaisyUI classes -->
+          {% if field.errors %}
+            <span class="text-error text-xs mt-1">{{ field.errors.0 }}</span>
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="card-actions justify-end pt-2">
+        <a href="{% url 'analysis:dashboard' %}" class="btn btn-ghost btn-sm">Cancel</a>
+        <button class="btn btn-primary btn-sm">Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
