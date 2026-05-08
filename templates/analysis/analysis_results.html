@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Statistical Analysis{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center my-4">
+  <h1 class="text-2xl font-bold">Statistical Analysis</h1>
+  <!-- All download buttons are always visible regardless of the active tab. -->
+  <div class="flex gap-2">
+    <a href="{% url 'analysis:dl-clinic-chart' %}"    class="btn btn-sm btn-outline">⬇ Clinic PNG</a>
+    <a href="{% url 'analysis:dl-monthly-chart' %}"   class="btn btn-sm btn-outline">⬇ Monthly PNG</a>
+    <a href="{% url 'analysis:dl-bootstrap-chart' %}" class="btn btn-sm btn-outline">⬇ Bootstrap PNG</a>
+    <a href="{% url 'analysis:dl-yearly-csv' %}"      class="btn btn-sm btn-outline">⬇ Yearly CSV</a>
+    <a href="{% url 'analysis:dl-monthly-csv' %}"     class="btn btn-sm btn-outline">⬇ Monthly CSV</a>
+  </div>
+</div>
+
+<div role="tablist" class="tabs tabs-boxed mb-0 bg-base-100 rounded-b-none px-2 pt-2">
+
+  <!-- Tab 1: Clinic Comparison -->
+  <input type="radio" name="atabs" role="tab" class="tab"
+         aria-label="Clinic Comparison" checked="checked" />
+  <div role="tabpanel" class="tab-content col-span-5 bg-base-100 rounded-b-box rounded-tr-box p-6">
+    <h2 class="font-semibold mb-3">Proportion of Deaths: Clinic 1 vs Clinic 2 (1841–1846)</h2>
+    <div class="bg-white rounded p-3 shadow-inner mb-4 h-80">
+      <canvas id="aClinicChart"></canvas>
+    </div>
+    {% if clinic_comparison %}
+    <div class="overflow-x-auto">
+      <table class="table table-sm table-zebra w-full">
+        <thead><tr>
+          <th>Year</th><th>Clinic 1 (proportion)</th><th>Clinic 2 (proportion)</th>
+        </tr></thead>
+        <tbody>
+          {% for row in clinic_comparison %}
+          <tr>
+            <td>{{ row.year }}</td>
+            <td>{{ row.clinic1 }}</td>
+            <td>{{ row.clinic2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-sm text-gray-500">No yearly data loaded.</p>
+    {% endif %}
+  </div>
+
+  <!-- Tab 2: Handwashing Effect -->
+  <input type="radio" name="atabs" role="tab" class="tab" aria-label="Handwashing Effect" />
+  <div role="tabpanel" class="tab-content col-span-5 bg-base-100 rounded-b-box rounded-tr-box p-6">
+    <h2 class="font-semibold mb-3">Monthly Proportion of Deaths (Clinic 1)</h2>
+    <div class="bg-white rounded p-3 shadow-inner mb-4 h-80">
+      <canvas id="aMonthlyChart"></canvas>
+    </div>
+    <!-- DaisyUI stats component: shows three key numbers side by side. -->
+    <div class="stats stats-horizontal shadow text-sm">
+      <div class="stat py-3 px-5">
+        <div class="stat-title text-xs">Mean before washing</div>
+        <div class="stat-value text-error text-xl">{{ mean_before }}</div>
+      </div>
+      <div class="stat py-3 px-5">
+        <div class="stat-title text-xs">Mean after washing</div>
+        <div class="stat-value text-success text-xl">{{ mean_after }}</div>
+      </div>
+      <div class="stat py-3 px-5">
+        <div class="stat-title text-xs">Mean difference</div>
+        <div class="stat-value text-primary text-xl">{{ mean_diff }}</div>
+      </div>
+    </div>
+    <p class="text-sm text-gray-500 mt-3">
+      Handwashing reduced the proportion of deaths by approximately
+      <strong>{{ mean_diff }}</strong> (absolute).
+    </p>
+  </div>
+
+  <!-- Tab 3: Bootstrap CI -->
+  <input type="radio" name="atabs" role="tab" class="tab" aria-label="Bootstrap CI" />
+  <div role="tabpanel" class="tab-content col-span-5 bg-base-100 rounded-b-box rounded-tr-box p-6">
+    <h2 class="font-semibold mb-3">Bootstrap 95 % Confidence Interval (3 000 resamples)</h2>
+    <div class="bg-white rounded p-3 shadow-inner mb-4 h-80">
+      <canvas id="aBootstrapChart"></canvas>
+    </div>
+    <div class="stats stats-horizontal shadow text-sm">
+      <div class="stat py-3 px-5">
+        <div class="stat-title text-xs">Lower bound (2.5 %)</div>
+        <div class="stat-value text-lg">{{ ci_lower }}</div>
+      </div>
+      <div class="stat py-3 px-5">
+        <div class="stat-title text-xs">Upper bound (97.5 %)</div>
+        <div class="stat-value text-lg">{{ ci_upper }}</div>
+      </div>
+    </div>
+    <p class="text-sm text-gray-500 mt-3">
+      With 95 % confidence, handwashing reduced the monthly death proportion by between
+      <strong>{{ ci_lower_pct }}%</strong> and <strong>{{ ci_upper_pct }}%</strong>
+      (absolute reduction).
+    </p>
+  </div>
+
+  <!-- Tab 4: t-Test -->
+  <input type="radio" name="atabs" role="tab" class="tab" aria-label="t-Test" />
+  <div role="tabpanel" class="tab-content col-span-5 bg-base-100 rounded-b-box rounded-tr-box p-6">
+    <h2 class="font-semibold mb-3">Welch's t-Test: Before vs After Handwashing</h2>
+    <div class="stats stats-horizontal shadow text-sm">
+      <div class="stat py-3 px-5">
+        <div class="stat-title text-xs">t-statistic</div>
+        <div class="stat-value text-lg">{{ t_stat }}</div>
+      </div>
+      <div class="stat py-3 px-5">
+        <div class="stat-title text-xs">p-value</div>
+        <!-- Conditional class: green if significant, red if not. -->
+        <div class="stat-value text-lg {% if significant %}text-success{% else %}text-error{% endif %}">
+          {{ p_value_fmt }}
+        </div>
+      </div>
+    </div>
+    <!-- alert-success / alert-error: DaisyUI coloured alert boxes. -->
+    <div class="alert {% if significant %}alert-success{% else %}alert-error{% endif %} mt-4 text-sm">
+      {% if significant %}
+        ✅ The difference is <strong>statistically significant</strong> (p &lt; 0.05).
+        Handwashing provably reduced mortality.
+      {% else %}
+        ❌ The difference is <strong>not statistically significant</strong> (p ≥ 0.05).
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Tab 5: Summary -->
+  <input type="radio" name="atabs" role="tab" class="tab" aria-label="Summary" />
+  <div role="tabpanel" class="tab-content col-span-5 bg-base-100 rounded-b-box rounded-tr-box p-6">
+    <h2 class="font-semibold mb-3">Conclusions</h2>
+    <ul class="list-disc list-inside space-y-2 text-sm text-gray-700">
+      <li>Clinic 1 (medical students performing autopsies) had consistently
+          higher death proportions than Clinic 2 (midwife students) from 1841–1846.</li>
+      <li>After Semmelweis mandated handwashing in June 1847, deaths fell by
+          roughly <strong>{{ mean_diff }}</strong> in absolute proportion.</li>
+      <li>Bootstrap 95 % CI:
+          [<strong>{{ ci_lower }}</strong>, <strong>{{ ci_upper }}</strong>] —
+          equivalent to a {{ ci_lower_pct }}–{{ ci_upper_pct }} percentage-point
+          reduction.</li>
+      <li>Welch's t-test: t = {{ t_stat }}, p = {{ p_value_fmt }}.
+          {% if significant %}Result is statistically significant.
+          {% else %}Result is not statistically significant.{% endif %}
+      </li>
+    </ul>
+
+    {% if clinic_comparison %}
+    <h3 class="font-semibold mt-5 mb-2">Clinic Comparison Table</h3>
+    <div class="overflow-x-auto">
+      <table class="table table-sm table-zebra w-full">
+        <thead><tr>
+          <th>Year</th><th>Clinic 1 (proportion)</th><th>Clinic 2 (proportion)</th>
+        </tr></thead>
+        <tbody>
+          {% for row in clinic_comparison %}
+          <tr>
+            <td>{{ row.year }}</td>
+            <td>{{ row.clinic1 }}</td>
+            <td>{{ row.clinic2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const cd = {{ yearly_chart_data|safe }};
+    const md = {{ monthly_chart_data|safe }};
+    const bd = {{ bootstrap_chart_data|safe }};
+    if (cd && !cd.empty) renderClinicChart("aClinicChart", cd);
+    if (md && !md.empty) renderMonthlyChart("aMonthlyChart", md);
+    if (bd && !bd.empty) renderBootstrapHistogram("aBootstrapChart", bd);
+  });
+</script>
+{% endblock %}
